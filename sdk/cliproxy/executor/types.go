@@ -36,6 +36,10 @@ const (
 	SelectedAuthCallbackMetadataKey = "selected_auth_callback"
 	// ExecutionSessionMetadataKey identifies a long-lived downstream execution session.
 	ExecutionSessionMetadataKey = "execution_session_id"
+	// CredentialGroupMetadataKey constrains selection to one credential group.
+	CredentialGroupMetadataKey = "credential_group"
+	// CredentialGroupStrictMetadataKey enables credential group isolation.
+	CredentialGroupStrictMetadataKey = "credential_group_strict"
 )
 
 // Request encapsulates the translated payload that will be sent to a provider executor.

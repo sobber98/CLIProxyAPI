@@ -67,6 +67,7 @@ func (s *ConfigSynthesizer) synthesizeGeminiKeyEntries(ctx *SynthesisContext, en
 			continue
 		}
 		prefix := strings.TrimSpace(entry.Prefix)
+		group := strings.TrimSpace(entry.Group)
 		base := strings.TrimSpace(entry.BaseURL)
 		proxyURL := strings.TrimSpace(entry.ProxyURL)
 		id, token := idGen.Next(idKind, key, base)
@@ -93,6 +94,7 @@ func (s *ConfigSynthesizer) synthesizeGeminiKeyEntries(ctx *SynthesisContext, en
 			Provider:   provider,
 			Label:      label,
 			Prefix:     prefix,
+			Group:      group,
 			Status:     coreauth.StatusActive,
 			ProxyURL:   proxyURL,
 			Attributes: attrs,
@@ -123,6 +125,7 @@ func (s *ConfigSynthesizer) synthesizeClaudeKeys(ctx *SynthesisContext) []*corea
 			continue
 		}
 		prefix := strings.TrimSpace(ck.Prefix)
+		group := strings.TrimSpace(ck.Group)
 		base := strings.TrimSpace(ck.BaseURL)
 		id, token := idGen.Next("claude:apikey", key, base)
 		attrs := map[string]string{
@@ -152,6 +155,7 @@ func (s *ConfigSynthesizer) synthesizeClaudeKeys(ctx *SynthesisContext) []*corea
 			Provider:   "claude",
 			Label:      "claude-apikey",
 			Prefix:     prefix,
+			Group:      group,
 			Status:     coreauth.StatusActive,
 			ProxyURL:   proxyURL,
 			Attributes: attrs,
@@ -182,6 +186,7 @@ func (s *ConfigSynthesizer) synthesizeCodexKeys(ctx *SynthesisContext) []*coreau
 			continue
 		}
 		prefix := strings.TrimSpace(ck.Prefix)
+		group := strings.TrimSpace(ck.Group)
 		id, token := idGen.Next("codex:apikey", key, ck.BaseURL)
 		attrs := map[string]string{
 			"source":  fmt.Sprintf("config:codex[%s]", token),
@@ -210,6 +215,7 @@ func (s *ConfigSynthesizer) synthesizeCodexKeys(ctx *SynthesisContext) []*coreau
 			Provider:   "codex",
 			Label:      "codex-apikey",
 			Prefix:     prefix,
+			Group:      group,
 			Status:     coreauth.StatusActive,
 			ProxyURL:   proxyURL,
 			Attributes: attrs,
@@ -239,6 +245,7 @@ func (s *ConfigSynthesizer) synthesizeOpenAICompat(ctx *SynthesisContext) []*cor
 			continue
 		}
 		prefix := strings.TrimSpace(compat.Prefix)
+		group := strings.TrimSpace(compat.Group)
 		providerName := strings.ToLower(strings.TrimSpace(compat.Name))
 		if providerName == "" {
 			providerName = "openai-compatibility"
@@ -253,6 +260,10 @@ func (s *ConfigSynthesizer) synthesizeOpenAICompat(ctx *SynthesisContext) []*cor
 			entry := &compat.APIKeyEntries[j]
 			key := strings.TrimSpace(entry.APIKey)
 			proxyURL := strings.TrimSpace(entry.ProxyURL)
+			entryGroup := strings.TrimSpace(entry.Group)
+			if entryGroup == "" {
+				entryGroup = group
+			}
 			idKind := fmt.Sprintf("openai-compatibility:%s", providerName)
 			id, token := idGen.Next(idKind, key, base, proxyURL)
 			attrs := map[string]string{
@@ -280,6 +291,7 @@ func (s *ConfigSynthesizer) synthesizeOpenAICompat(ctx *SynthesisContext) []*cor
 				Provider:   internalProviderKey,
 				Label:      compat.Name,
 				Prefix:     prefix,
+				Group:      entryGroup,
 				Status:     coreauth.StatusActive,
 				ProxyURL:   proxyURL,
 				Attributes: attrs,
@@ -319,6 +331,7 @@ func (s *ConfigSynthesizer) synthesizeOpenAICompat(ctx *SynthesisContext) []*cor
 				Provider:   internalProviderKey,
 				Label:      compat.Name,
 				Prefix:     prefix,
+				Group:      group,
 				Status:     coreauth.StatusActive,
 				Attributes: attrs,
 				Metadata:   metadata,
@@ -348,6 +361,7 @@ func (s *ConfigSynthesizer) synthesizeVertexCompat(ctx *SynthesisContext) []*cor
 
 		key := strings.TrimSpace(compat.APIKey)
 		prefix := strings.TrimSpace(compat.Prefix)
+		group := strings.TrimSpace(compat.Group)
 		proxyURL := strings.TrimSpace(compat.ProxyURL)
 		idKind := "vertex:apikey"
 		id, token := idGen.Next(idKind, key, base, proxyURL)
@@ -371,6 +385,7 @@ func (s *ConfigSynthesizer) synthesizeVertexCompat(ctx *SynthesisContext) []*cor
 			Provider:   providerName,
 			Label:      "vertex-apikey",
 			Prefix:     prefix,
+			Group:      group,
 			Status:     coreauth.StatusActive,
 			ProxyURL:   proxyURL,
 			Attributes: attrs,

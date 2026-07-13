@@ -53,6 +53,8 @@ type Auth struct {
 	Provider string `json:"provider"`
 	// Prefix optionally namespaces models for routing (e.g., "teamA/gemini-3-pro-preview").
 	Prefix string `json:"prefix,omitempty"`
+	// Group is the optional credential isolation group.
+	Group string `json:"group,omitempty"`
 	// FileName stores the relative or absolute path of the backing auth file.
 	FileName string `json:"-"`
 	// Storage holds the token persistence implementation used during login flows.

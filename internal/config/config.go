@@ -440,6 +440,7 @@ type CloakConfig struct {
 type ClaudeKey struct {
 	// APIKey is the authentication key for accessing Claude API services.
 	APIKey string `yaml:"api-key" json:"api-key"`
+	Group  string `yaml:"group,omitempty" json:"group,omitempty"`
 
 	// Priority controls selection preference when multiple credentials match.
 	// Higher values are preferred; defaults to 0.
@@ -507,6 +508,7 @@ func (m ClaudeModel) GetForceMapping() bool  { return m.ForceMapping }
 type CodexKey struct {
 	// APIKey is the authentication key for accessing Codex API services.
 	APIKey string `yaml:"api-key" json:"api-key"`
+	Group  string `yaml:"group,omitempty" json:"group,omitempty"`
 
 	// Priority controls selection preference when multiple credentials match.
 	// Higher values are preferred; defaults to 0.
@@ -566,6 +568,7 @@ func (m CodexModel) GetForceMapping() bool  { return m.ForceMapping }
 type GeminiKey struct {
 	// APIKey is the authentication key for accessing Gemini API services.
 	APIKey string `yaml:"api-key" json:"api-key"`
+	Group  string `yaml:"group,omitempty" json:"group,omitempty"`
 
 	// Priority controls selection preference when multiple credentials match.
 	// Higher values are preferred; defaults to 0.
@@ -620,7 +623,8 @@ func (m GeminiModel) GetForceMapping() bool  { return m.ForceMapping }
 // with external providers, allowing model aliases to be routed through OpenAI API format.
 type OpenAICompatibility struct {
 	// Name is the identifier for this OpenAI compatibility configuration.
-	Name string `yaml:"name" json:"name"`
+	Name  string `yaml:"name" json:"name"`
+	Group string `yaml:"group,omitempty" json:"group,omitempty"`
 
 	// Priority controls selection preference when multiple providers or credentials match.
 	// Higher values are preferred; defaults to 0.
@@ -652,6 +656,7 @@ type OpenAICompatibility struct {
 type OpenAICompatibilityAPIKey struct {
 	// APIKey is the authentication key for accessing the external API services.
 	APIKey string `yaml:"api-key" json:"api-key"`
+	Group  string `yaml:"group,omitempty" json:"group,omitempty"`
 
 	// ProxyURL overrides the global proxy setting for this API key if provided.
 	ProxyURL string `yaml:"proxy-url,omitempty" json:"proxy-url,omitempty"`
@@ -756,6 +761,9 @@ func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
 			return cfgOptional, nil
 		}
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
+	}
+	if errGroups := cfg.NormalizeAndValidateAPIKeyGroups(); errGroups != nil {
+		return nil, errGroups
 	}
 
 	// Hash remote management key if plaintext is detected (nested)
@@ -994,7 +1002,11 @@ func (cfg *Config) SanitizeOpenAICompatibility() {
 	for i := range cfg.OpenAICompatibility {
 		e := cfg.OpenAICompatibility[i]
 		e.Name = strings.TrimSpace(e.Name)
+		e.Group = strings.TrimSpace(e.Group)
 		e.Prefix = normalizeModelPrefix(e.Prefix)
+		for j := range e.APIKeyEntries {
+			e.APIKeyEntries[j].Group = strings.TrimSpace(e.APIKeyEntries[j].Group)
+		}
 		e.BaseURL = strings.TrimSpace(e.BaseURL)
 		e.Headers = NormalizeHeaders(e.Headers)
 		if e.BaseURL == "" {
@@ -1015,6 +1027,7 @@ func (cfg *Config) SanitizeCodexKeys() {
 	out := make([]CodexKey, 0, len(cfg.CodexKey))
 	for i := range cfg.CodexKey {
 		e := cfg.CodexKey[i]
+		e.Group = strings.TrimSpace(e.Group)
 		e.Prefix = normalizeModelPrefix(e.Prefix)
 		e.BaseURL = strings.TrimSpace(e.BaseURL)
 		e.Headers = NormalizeHeaders(e.Headers)
@@ -1034,6 +1047,7 @@ func (cfg *Config) SanitizeClaudeKeys() {
 	}
 	for i := range cfg.ClaudeKey {
 		entry := &cfg.ClaudeKey[i]
+		entry.Group = strings.TrimSpace(entry.Group)
 		entry.Prefix = normalizeModelPrefix(entry.Prefix)
 		entry.Headers = NormalizeHeaders(entry.Headers)
 		entry.ExcludedModels = NormalizeExcludedModels(entry.ExcludedModels)
@@ -1045,6 +1059,7 @@ func sanitizeGeminiKeyEntries(entries []GeminiKey) []GeminiKey {
 	out := entries[:0]
 	for i := range entries {
 		entry := entries[i]
+		entry.Group = strings.TrimSpace(entry.Group)
 		entry.APIKey = strings.TrimSpace(entry.APIKey)
 		if entry.APIKey == "" {
 			continue

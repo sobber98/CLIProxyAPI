@@ -72,6 +72,20 @@ func TestFindAllAntigravityCreditsCandidateAuths_PrefersKnownCreditsThenUnknown(
 	if pinned[0].auth.ID != "aa-unknown" {
 		t.Fatalf("pinned[0].auth.ID = %q, want %q", pinned[0].auth.ID, "aa-unknown")
 	}
+
+	m.auths["zz-credits"].Group = "team-a"
+	m.auths["aa-unknown"].Group = "team-b"
+	groupedOpts := cliproxyexecutor.Options{Metadata: map[string]any{
+		cliproxyexecutor.CredentialGroupStrictMetadataKey: true,
+		cliproxyexecutor.CredentialGroupMetadataKey:       "team-a",
+	}}
+	grouped, errGrouped := m.findAllAntigravityCreditsCandidateAuths(context.Background(), "claude-sonnet-4-6", groupedOpts)
+	if errGrouped != nil {
+		t.Fatalf("findAllAntigravityCreditsCandidateAuths(grouped) error = %v", errGrouped)
+	}
+	if len(grouped) != 1 || grouped[0].auth.ID != "zz-credits" {
+		t.Fatalf("grouped candidates = %#v, want only zz-credits", grouped)
+	}
 }
 
 func TestFindAllAntigravityCreditsCandidateAuths_HomeKVUnavailableReturnsError(t *testing.T) {

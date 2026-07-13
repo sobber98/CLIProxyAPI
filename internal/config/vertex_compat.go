@@ -19,6 +19,7 @@ type VertexCompatKey struct {
 
 	// Prefix optionally namespaces model aliases for this credential (e.g., "teamA/vertex-pro").
 	Prefix string `yaml:"prefix,omitempty" json:"prefix,omitempty"`
+	Group  string `yaml:"group,omitempty" json:"group,omitempty"`
 
 	// BaseURL optionally overrides the Vertex-compatible API endpoint.
 	// The executor will append "/v1/publishers/google/models/{model}:action" to this.
@@ -74,6 +75,7 @@ func (cfg *Config) SanitizeVertexCompatKeys() {
 	for i := range cfg.VertexCompatAPIKey {
 		entry := cfg.VertexCompatAPIKey[i]
 		entry.APIKey = strings.TrimSpace(entry.APIKey)
+		entry.Group = strings.TrimSpace(entry.Group)
 		if entry.APIKey == "" {
 			continue
 		}

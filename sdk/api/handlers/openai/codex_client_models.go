@@ -6,7 +6,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/gin-gonic/gin"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
+	"github.com/router-for-me/CLIProxyAPI/v7/sdk/api/handlers"
 )
 
 type codexClientModelsPayload struct {
@@ -30,8 +32,8 @@ var codexClientAllowedReasoningLevels = map[string]struct{}{
 	"ultra":  {},
 }
 
-func (h *OpenAIAPIHandler) codexClientModelsResponse() map[string]any {
-	return CodexClientModelsResponse(h.Models())
+func (h *OpenAIAPIHandler) codexClientModelsResponse(c *gin.Context) map[string]any {
+	return CodexClientModelsResponse(handlers.FilterModelsForCredentialGroup(c, h.AuthManager, h.Models()))
 }
 
 func CodexClientModelsResponse(models []map[string]any) map[string]any {

@@ -156,6 +156,10 @@ func synthesizeFileAuths(ctx *SynthesisContext, fullPath string, data []byte) []
 			prefix = trimmed
 		}
 	}
+	group := ""
+	if rawGroup, ok := metadata["group"].(string); ok {
+		group = strings.TrimSpace(rawGroup)
+	}
 
 	disabled, _ := metadata["disabled"].(bool)
 	status := coreauth.StatusActive
@@ -172,6 +176,7 @@ func synthesizeFileAuths(ctx *SynthesisContext, fullPath string, data []byte) []
 		Provider: provider,
 		Label:    label,
 		Prefix:   prefix,
+		Group:    group,
 		Status:   status,
 		Disabled: disabled,
 		Attributes: map[string]string{

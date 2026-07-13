@@ -1651,6 +1651,12 @@ func (m *Manager) authSupportsRouteModel(registryRef *registry.ModelRegistry, au
 	return selectionKey != "" && selectionKey != routeKey && registryRef.ClientSupportsModel(auth.ID, selectionKey)
 }
 
+// AuthSupportsRouteModel reports whether an auth can route a model, including
+// configured model aliases used by the selection path.
+func (m *Manager) AuthSupportsRouteModel(auth *Auth, routeModel string) bool {
+	return m.authSupportsRouteModel(registry.GetGlobalRegistry(), auth, routeModel)
+}
+
 func discardStreamChunks(ch <-chan cliproxyexecutor.StreamChunk) {
 	if ch == nil {
 		return
@@ -4512,8 +4518,25 @@ func (m *Manager) routeAwareSelectionRequired(auth *Auth, routeModel string) boo
 	return m.selectionModelKeyForAuth(auth, routeModel) != canonicalModelKey(routeModel)
 }
 
+func authMatchesCredentialGroup(auth *Auth, metadata map[string]any) bool {
+	if len(metadata) == 0 {
+		return true
+	}
+	strict, _ := metadata[cliproxyexecutor.CredentialGroupStrictMetadataKey].(bool)
+	if !strict {
+		return true
+	}
+	group, _ := metadata[cliproxyexecutor.CredentialGroupMetadataKey].(string)
+	return auth != nil && strings.TrimSpace(auth.Group) == strings.TrimSpace(group)
+}
+
+func credentialGroupIsolationEnabled(metadata map[string]any) bool {
+	_, strict := metadata[cliproxyexecutor.CredentialGroupStrictMetadataKey].(bool)
+	return strict
+}
+
 func (m *Manager) pickNextLegacy(ctx context.Context, provider, model string, opts cliproxyexecutor.Options, tried map[string]struct{}) (*Auth, ProviderExecutor, error) {
-	if m.HomeEnabled() {
+	if m.HomeEnabled() && !credentialGroupIsolationEnabled(opts.Metadata) {
 		auth, exec, _, err := m.pickNextViaHome(ctx, model, opts, tried)
 		return auth, exec, err
 	}
@@ -4541,6 +4564,9 @@ func (m *Manager) pickNextLegacy(ctx context.Context, provider, model string, op
 	registryRef := registry.GetGlobalRegistry()
 	for _, candidate := range m.auths {
 		if candidate == nil || executorKeyFromAuth(candidate) != provider || candidate.Disabled {
+			continue
+		}
+		if !authMatchesCredentialGroup(candidate, opts.Metadata) {
 			continue
 		}
 		if pinnedAuthID != "" && candidate.ID != pinnedAuthID {
@@ -4605,9 +4631,12 @@ func (m *Manager) SelectAuth(ctx context.Context, provider, model string, opts c
 }
 
 func (m *Manager) pickNext(ctx context.Context, provider, model string, opts cliproxyexecutor.Options, tried map[string]struct{}) (*Auth, ProviderExecutor, error) {
-	if m.HomeEnabled() {
+	if m.HomeEnabled() && !credentialGroupIsolationEnabled(opts.Metadata) {
 		auth, exec, _, err := m.pickNextViaHome(ctx, model, opts, tried)
 		return auth, exec, err
+	}
+	if credentialGroupIsolationEnabled(opts.Metadata) {
+		return m.pickNextLegacy(ctx, provider, model, opts, tried)
 	}
 
 	if m.hasPluginScheduler() || !m.useSchedulerFastPath() {
@@ -4646,6 +4675,13 @@ func (m *Manager) pickNext(ctx context.Context, provider, model string, opts cli
 		if selected == nil {
 			return nil, nil, &Error{Code: "auth_not_found", Message: "selector returned no auth"}
 		}
+		if !authMatchesCredentialGroup(selected, opts.Metadata) {
+			if tried == nil {
+				tried = make(map[string]struct{})
+			}
+			tried[selected.ID] = struct{}{}
+			continue
+		}
 		if disallowFreeAuth && isFreeCodexAuth(selected) {
 			if tried == nil {
 				tried = make(map[string]struct{})
@@ -4667,7 +4703,7 @@ func (m *Manager) pickNext(ctx context.Context, provider, model string, opts cli
 }
 
 func (m *Manager) pickNextMixedLegacy(ctx context.Context, providers []string, model string, opts cliproxyexecutor.Options, tried map[string]struct{}) (*Auth, ProviderExecutor, string, error) {
-	if m.HomeEnabled() {
+	if m.HomeEnabled() && !credentialGroupIsolationEnabled(opts.Metadata) {
 		return m.pickNextViaHome(ctx, model, opts, tried)
 	}
 
@@ -4701,6 +4737,9 @@ func (m *Manager) pickNextMixedLegacy(ctx context.Context, providers []string, m
 	registryRef := registry.GetGlobalRegistry()
 	for _, candidate := range m.auths {
 		if candidate == nil || candidate.Disabled {
+			continue
+		}
+		if !authMatchesCredentialGroup(candidate, opts.Metadata) {
 			continue
 		}
 		if pinnedAuthID != "" && candidate.ID != pinnedAuthID {
@@ -4770,8 +4809,11 @@ func (m *Manager) pickNextMixedLegacy(ctx context.Context, providers []string, m
 }
 
 func (m *Manager) pickNextMixed(ctx context.Context, providers []string, model string, opts cliproxyexecutor.Options, tried map[string]struct{}) (*Auth, ProviderExecutor, string, error) {
-	if m.HomeEnabled() {
+	if m.HomeEnabled() && !credentialGroupIsolationEnabled(opts.Metadata) {
 		return m.pickNextViaHome(ctx, model, opts, tried)
+	}
+	if credentialGroupIsolationEnabled(opts.Metadata) {
+		return m.pickNextMixedLegacy(ctx, providers, model, opts, tried)
 	}
 
 	if m.hasPluginScheduler() || !m.useSchedulerFastPath() {
@@ -4833,6 +4875,13 @@ func (m *Manager) pickNextMixed(ctx context.Context, providers []string, model s
 		}
 		if selected == nil {
 			return nil, nil, "", &Error{Code: "auth_not_found", Message: "selector returned no auth"}
+		}
+		if !authMatchesCredentialGroup(selected, opts.Metadata) {
+			if tried == nil {
+				tried = make(map[string]struct{})
+			}
+			tried[selected.ID] = struct{}{}
+			continue
 		}
 		if disallowFreeAuth && isFreeCodexAuth(selected) {
 			if tried == nil {
@@ -5250,6 +5299,9 @@ func (m *Manager) findAllAntigravityCreditsCandidateAuths(ctx context.Context, r
 			continue
 		}
 		if pinnedAuthID != "" && auth.ID != pinnedAuthID {
+			continue
+		}
+		if !authMatchesCredentialGroup(auth, opts.Metadata) {
 			continue
 		}
 		if !strings.EqualFold(strings.TrimSpace(auth.Provider), "antigravity") {

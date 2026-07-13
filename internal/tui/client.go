@@ -256,6 +256,37 @@ func (c *Client) GetAPIKeys() ([]string, error) {
 	return result, nil
 }
 
+// GetAPIKeyGroups fetches downstream API-key-to-credential-group assignments.
+func (c *Client) GetAPIKeyGroups() (map[string]string, error) {
+	wrapper, err := c.getJSON("/v0/management/api-key-groups")
+	if err != nil {
+		return nil, err
+	}
+	raw, ok := wrapper["api-key-groups"]
+	if !ok {
+		return map[string]string{}, nil
+	}
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return nil, err
+	}
+	groups := make(map[string]string)
+	if err := json.Unmarshal(data, &groups); err != nil {
+		return nil, err
+	}
+	return groups, nil
+}
+
+// PutAPIKeyGroups replaces downstream API-key-to-credential-group assignments.
+func (c *Client) PutAPIKeyGroups(groups map[string]string) error {
+	body, err := json.Marshal(map[string]any{"api-key-groups": groups})
+	if err != nil {
+		return err
+	}
+	_, err = c.put("/v0/management/api-key-groups", strings.NewReader(string(body)))
+	return err
+}
+
 // AddAPIKey adds a new API key by sending old=nil, new=key which appends.
 func (c *Client) AddAPIKey(key string) error {
 	body := map[string]any{"old": nil, "new": key}

@@ -16,6 +16,7 @@ type keysTabModel struct {
 	client       *Client
 	viewport     viewport.Model
 	keys         []string
+	groups       map[string]string
 	gemini       []map[string]any
 	interactions []map[string]any
 	claude       []map[string]any
@@ -31,14 +32,16 @@ type keysTabModel struct {
 	status       string
 
 	// Editing / Adding
-	editing   bool
-	adding    bool
-	editIdx   int
-	editInput textinput.Model
+	editing      bool
+	adding       bool
+	editingGroup bool
+	editIdx      int
+	editInput    textinput.Model
 }
 
 type keysDataMsg struct {
 	apiKeys      []string
+	groups       map[string]string
 	gemini       []map[string]any
 	interactions []map[string]any
 	claude       []map[string]any
@@ -76,6 +79,7 @@ func (m keysTabModel) fetchKeys() tea.Msg {
 		return result
 	}
 	result.apiKeys = apiKeys
+	result.groups, _ = m.client.GetAPIKeyGroups()
 	result.gemini, _ = m.client.GetGeminiKeys()
 	result.interactions, _ = m.client.GetInteractionsKeys()
 	result.claude, _ = m.client.GetClaudeKeys()
@@ -96,6 +100,7 @@ func (m keysTabModel) Update(msg tea.Msg) (keysTabModel, tea.Cmd) {
 		} else {
 			m.err = nil
 			m.keys = msg.apiKeys
+			m.groups = msg.groups
 			m.gemini = msg.gemini
 			m.interactions = msg.interactions
 			m.claude = msg.claude
@@ -121,11 +126,11 @@ func (m keysTabModel) Update(msg tea.Msg) (keysTabModel, tea.Cmd) {
 
 	case tea.KeyMsg:
 		// ---- Editing / Adding mode ----
-		if m.editing || m.adding {
+		if m.editing || m.adding || m.editingGroup {
 			switch msg.String() {
 			case "enter":
 				value := strings.TrimSpace(m.editInput.Value())
-				if value == "" {
+				if value == "" && !m.editingGroup {
 					m.editing = false
 					m.adding = false
 					m.editInput.Blur()
@@ -133,10 +138,26 @@ func (m keysTabModel) Update(msg tea.Msg) (keysTabModel, tea.Cmd) {
 					return m, nil
 				}
 				isAdding := m.adding
+				isEditingGroup := m.editingGroup
 				editIdx := m.editIdx
 				m.editing = false
 				m.adding = false
+				m.editingGroup = false
 				m.editInput.Blur()
+				if isEditingGroup {
+					key := m.keys[editIdx]
+					groups := make(map[string]string, len(m.groups)+1)
+					for assignedKey, group := range m.groups {
+						groups[assignedKey] = group
+					}
+					groups[key] = value
+					return m, func() tea.Msg {
+						if err := m.client.PutAPIKeyGroups(groups); err != nil {
+							return keyActionMsg{err: err}
+						}
+						return keyActionMsg{action: "API key group updated"}
+					}
+				}
 				if isAdding {
 					return m, func() tea.Msg {
 						err := m.client.AddAPIKey(value)
@@ -156,6 +177,7 @@ func (m keysTabModel) Update(msg tea.Msg) (keysTabModel, tea.Cmd) {
 			case "esc":
 				m.editing = false
 				m.adding = false
+				m.editingGroup = false
 				m.editInput.Blur()
 				m.viewport.SetContent(m.renderContent())
 				return m, nil
@@ -219,6 +241,19 @@ func (m keysTabModel) Update(msg tea.Msg) (keysTabModel, tea.Cmd) {
 				m.editIdx = m.cursor
 				m.editInput.SetValue(m.keys[m.cursor])
 				m.editInput.Prompt = T("edit_key_prompt")
+				m.editInput.Focus()
+				m.viewport.SetContent(m.renderContent())
+				return m, textinput.Blink
+			}
+			return m, nil
+		case "g":
+			if m.cursor < len(m.keys) {
+				m.editingGroup = true
+				m.editing = false
+				m.adding = false
+				m.editIdx = m.cursor
+				m.editInput.SetValue(m.groups[m.keys[m.cursor]])
+				m.editInput.Prompt = "  Group: "
 				m.editInput.Focus()
 				m.viewport.SetContent(m.renderContent())
 				return m, textinput.Blink
@@ -313,6 +348,9 @@ func (m keysTabModel) renderContent() string {
 		}
 
 		row := fmt.Sprintf("%s%d. %s", cursor, i+1, maskKey(key))
+		if group := strings.TrimSpace(m.groups[key]); group != "" {
+			row += " (group: " + group + ")"
+		}
 		sb.WriteString(rowStyle.Render(row))
 		sb.WriteString("\n")
 
@@ -323,7 +361,7 @@ func (m keysTabModel) renderContent() string {
 		}
 
 		// Edit input
-		if m.editing && m.editIdx == i {
+		if (m.editing || m.editingGroup) && m.editIdx == i {
 			sb.WriteString(m.editInput.View())
 			sb.WriteString("\n")
 			sb.WriteString(helpStyle.Render(T("enter_save_esc")))
@@ -362,6 +400,9 @@ func (m keysTabModel) renderContent() string {
 			if baseURL != "" {
 				info += " → " + baseURL
 			}
+			if group := strings.TrimSpace(getString(entry, "group")); group != "" {
+				info += " (group: " + group + ")"
+			}
 			sb.WriteString(fmt.Sprintf("  %d. %s\n", i+1, info))
 		}
 		sb.WriteString("\n")
@@ -396,6 +437,9 @@ func renderProviderKeys(sb *strings.Builder, title string, keys []map[string]any
 		}
 		if baseURL != "" {
 			info += " → " + baseURL
+		}
+		if group := strings.TrimSpace(getString(key, "group")); group != "" {
+			info += " (group: " + group + ")"
 		}
 		sb.WriteString(fmt.Sprintf("  %d. %s\n", i+1, info))
 	}

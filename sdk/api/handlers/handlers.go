@@ -260,6 +260,7 @@ func requestExecutionMetadata(ctx context.Context) map[string]any {
 	// Only include it if the client explicitly provides it.
 	key := ""
 	requestPath := ""
+	meta := make(map[string]any)
 	if ctx != nil {
 		if ginCtx, ok := ctx.Value("gin").(*gin.Context); ok && ginCtx != nil && ginCtx.Request != nil {
 			key = strings.TrimSpace(ginCtx.GetHeader("Idempotency-Key"))
@@ -267,10 +268,18 @@ func requestExecutionMetadata(ctx context.Context) map[string]any {
 			if requestPath == "" && ginCtx.Request.URL != nil {
 				requestPath = strings.TrimSpace(ginCtx.Request.URL.Path)
 			}
+			if raw, ok := ginCtx.Get("accessMetadata"); ok {
+				switch metadata := raw.(type) {
+				case map[string]string:
+					if metadata["credential_group_strict"] == "true" {
+						meta[coreexecutor.CredentialGroupStrictMetadataKey] = true
+						meta[coreexecutor.CredentialGroupMetadataKey] = strings.TrimSpace(metadata["credential_group"])
+					}
+				}
+			}
 		}
 	}
 
-	meta := make(map[string]any)
 	if key != "" {
 		meta[idempotencyKeyMetadataKey] = key
 	}
@@ -290,6 +299,48 @@ func requestExecutionMetadata(ctx context.Context) map[string]any {
 		meta[coreexecutor.DisallowFreeAuthMetadataKey] = true
 	}
 	return meta
+}
+
+// FilterModelsForCredentialGroup removes models which cannot be served by an
+// auth credential in the authenticated downstream key's group. It intentionally
+// leaves the legacy catalog untouched unless strict grouping was enabled by the
+// config access provider.
+func FilterModelsForCredentialGroup(c *gin.Context, manager *coreauth.Manager, models []map[string]any) []map[string]any {
+	if c == nil || manager == nil {
+		return models
+	}
+	if c.Request == nil {
+		return models
+	}
+	metadata := requestExecutionMetadata(context.WithValue(c.Request.Context(), "gin", c))
+	strict, _ := metadata[coreexecutor.CredentialGroupStrictMetadataKey].(bool)
+	if !strict {
+		return models
+	}
+	group, _ := metadata[coreexecutor.CredentialGroupMetadataKey].(string)
+	group = strings.TrimSpace(group)
+	auths := manager.List()
+	filtered := make([]map[string]any, 0, len(models))
+	for _, model := range models {
+		if model == nil {
+			continue
+		}
+		modelID, _ := model["id"].(string)
+		if modelID == "" {
+			modelID, _ = model["name"].(string)
+		}
+		modelID = strings.TrimPrefix(strings.TrimSpace(modelID), "models/")
+		if modelID == "" {
+			continue
+		}
+		for _, auth := range auths {
+			if auth != nil && strings.TrimSpace(auth.Group) == group && !auth.Disabled && manager.AuthSupportsRouteModel(auth, modelID) {
+				filtered = append(filtered, model)
+				break
+			}
+		}
+	}
+	return filtered
 }
 
 func addAuthSelectionModelMetadata(meta map[string]any, model string) {

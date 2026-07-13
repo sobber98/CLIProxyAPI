@@ -3,6 +3,7 @@ package configaccess
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"strings"
 
 	sdkaccess "github.com/router-for-me/CLIProxyAPI/v7/sdk/access"
@@ -24,16 +25,17 @@ func Register(cfg *sdkconfig.SDKConfig) {
 
 	sdkaccess.RegisterProvider(
 		sdkaccess.AccessProviderTypeConfigAPIKey,
-		newProvider(sdkaccess.DefaultAccessProviderName, keys),
+		newProvider(sdkaccess.DefaultAccessProviderName, keys, cfg.APIKeyGroups),
 	)
 }
 
 type provider struct {
-	name string
-	keys map[string]struct{}
+	name   string
+	keys   map[string]struct{}
+	groups map[string]string
 }
 
-func newProvider(name string, keys []string) *provider {
+func newProvider(name string, keys []string, groups ...map[string]string) *provider {
 	providerName := strings.TrimSpace(name)
 	if providerName == "" {
 		providerName = sdkaccess.DefaultAccessProviderName
@@ -42,7 +44,15 @@ func newProvider(name string, keys []string) *provider {
 	for _, key := range keys {
 		keySet[key] = struct{}{}
 	}
-	return &provider{name: providerName, keys: keySet}
+	var configuredGroups map[string]string
+	if len(groups) > 0 {
+		configuredGroups = groups[0]
+	}
+	groupMap := make(map[string]string, len(configuredGroups))
+	for key, group := range configuredGroups {
+		groupMap[key] = strings.TrimSpace(group)
+	}
+	return &provider{name: providerName, keys: keySet, groups: groupMap}
 }
 
 func (p *provider) Identifier() string {
@@ -94,7 +104,9 @@ func (p *provider) Authenticate(_ context.Context, r *http.Request) (*sdkaccess.
 				Provider:  p.Identifier(),
 				Principal: candidate.value,
 				Metadata: map[string]string{
-					"source": candidate.source,
+					"source":                  candidate.source,
+					"credential_group":        p.groups[candidate.value],
+					"credential_group_strict": strconv.FormatBool(len(p.groups) > 0),
 				},
 			}, nil
 		}

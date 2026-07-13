@@ -41,6 +41,13 @@ api-keys:
   - "your-api-key-2"
   - "your-api-key-3"
 
+# Optional: bind downstream API keys to credential groups. Adding at least one
+# mapping enables strict isolation: unassigned keys can use only ungrouped
+# credentials, and grouped keys can use only credentials with the same group.
+# api-key-groups:
+#   your-api-key-1: team-a
+#   your-api-key-2: team-b
+
 # Enable debug logging
 debug: false
 

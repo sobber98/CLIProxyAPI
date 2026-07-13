@@ -74,6 +74,9 @@ func ParseConfigBytes(data []byte) (*Config, error) {
 	if cfg.MaxRetryCredentials < 0 {
 		cfg.MaxRetryCredentials = 0
 	}
+	if errGroups := cfg.NormalizeAndValidateAPIKeyGroups(); errGroups != nil {
+		return nil, errGroups
+	}
 
 	cfg.NormalizePluginsConfig()
 
