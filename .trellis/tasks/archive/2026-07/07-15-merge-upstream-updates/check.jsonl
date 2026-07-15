@@ -1,0 +1,2 @@
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Verify merged upstream paths cannot bypass credential groups."}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Verify conflicts keep one authoritative group normalization and filtering path."}

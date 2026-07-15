@@ -1,0 +1,2 @@
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Resolve conflicts without losing the credential-grouping contract across config, synthesis, selection, and discovery."}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Preserve the existing shared group matching and normalization mechanisms while integrating upstream changes."}
