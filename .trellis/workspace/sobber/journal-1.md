@@ -71,3 +71,37 @@ Merged router-for-me/CLIProxyAPI upstream main into the fork with a local merge 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 3: Publish Docker image to GHCR
+
+**Date**: 2026-07-15
+**Task**: Publish Docker image to GHCR
+**Branch**: `main`
+
+### Summary
+
+Added a manual GitHub Actions workflow that publishes the CLIProxyAPI Docker image to GHCR as a linux/amd64 and linux/arm64 latest manifest, with embedded build metadata and documented CI contract.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `be62ce9e` | (see git log) |
+| `39624126` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
