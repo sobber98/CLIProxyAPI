@@ -38,3 +38,36 @@ Implemented and pushed credential group isolation across configuration, credenti
 ### Next Steps
 
 - None - task complete
+
+
+## Session 2: Merge upstream main
+
+**Date**: 2026-07-15
+**Task**: Merge upstream main
+**Branch**: `main`
+
+### Summary
+
+Merged router-for-me/CLIProxyAPI upstream main into the fork with a local merge commit. Resolved config, credential synthesis, and Codex model catalog conflicts while preserving credential grouping; verified focused tests and server build, then pushed the merged main branch to origin.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `dd357306` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
