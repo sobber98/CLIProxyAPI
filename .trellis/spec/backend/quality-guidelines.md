@@ -52,6 +52,65 @@ Questions to answer:
 
 ---
 
+## Scenario: Manual Multi-Platform GHCR Publication
+
+### 1. Scope / Trigger
+
+The repository publishes its server image through `.github/workflows/docker-publish.yml`. This CI integration is a deployment contract because it controls the registry credential, public image tag, image architectures, and binary build metadata.
+
+### 2. Signatures
+
+- Trigger: GitHub Actions `workflow_dispatch` only.
+- Image: `ghcr.io/sobber98/cliproxyapi:latest`.
+- Platforms: `linux/amd64,linux/arm64`.
+- Docker build arguments: `VERSION=latest`, `COMMIT=<short Git SHA>`, and `BUILD_DATE=<UTC RFC 3339 timestamp>`.
+
+### 3. Contracts
+
+- Workflow permissions are `contents: read` and `packages: write`; authenticate to GHCR with `${{ secrets.GITHUB_TOKEN }}`.
+- QEMU must be initialized before Buildx so an amd64 GitHub-hosted runner can produce the arm64 image variant.
+- The build action pushes a combined multi-platform manifest and publishes no tag other than `latest`.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required behavior |
+| --- | --- |
+| Workflow is not manually dispatched | Do not build or publish an image. |
+| GHCR login or build fails | Fail the workflow; the previously published `latest` image remains unchanged. |
+| Multi-platform build misses an architecture | Do not publish a replacement manifest. |
+| Bad image must be rolled back | Manually dispatch the workflow for a known-good Git ref. |
+
+### 5. Good/Base/Bad Cases
+
+- Good: A maintainer manually runs the workflow and receives a `latest` manifest for both required architectures with the selected ref's metadata.
+- Base: Re-running a known-good ref intentionally replaces `latest` with an equivalent supported manifest.
+- Bad: A push event automatically overwrites `latest`, or a build publishes only the runner architecture.
+
+### 6. Tests Required
+
+- Parse the workflow YAML and assert `workflow_dispatch` is its only trigger.
+- Assert the permissions, GHCR tag, platform list, Buildx/QEMU setup, push flag, and three Docker build arguments.
+- Run `go test ./...` and `go build -o test-output ./cmd/server && rm test-output` for the source image build contract.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```yaml
+on:
+  push:
+    branches: [main]
+```
+
+#### Correct
+
+```yaml
+on:
+  workflow_dispatch:
+```
+
+---
+
 ## Scenario: Credential Group Isolation
 
 ### 1. Scope / Trigger
