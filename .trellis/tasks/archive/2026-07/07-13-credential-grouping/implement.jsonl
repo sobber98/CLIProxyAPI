@@ -1,0 +1,3 @@
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Credential grouping crosses authentication, handler metadata, auth selection, management APIs, and TUI."}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"A single group normalization and matching policy must be reused across configuration, synthesis, and selection."}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Backend implementation and test conventions."}

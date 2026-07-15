@@ -1,0 +1,3 @@
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Review cross-layer propagation and ensure no request path bypasses group isolation."}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Review duplicate normalization or divergent group predicates."}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Review error handling, tests, and code quality."}
