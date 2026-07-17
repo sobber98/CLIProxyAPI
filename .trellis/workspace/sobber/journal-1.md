@@ -105,3 +105,36 @@ Added a manual GitHub Actions workflow that publishes the CLIProxyAPI Docker ima
 ### Next Steps
 
 - None - task complete
+
+
+## Session 4: Merge upstream updates
+
+**Date**: 2026-07-17
+**Task**: Merge upstream updates
+**Branch**: `main`
+
+### Summary
+
+Merged upstream/main at 106270be into the fork main branch, preserved fork history and untracked Trellis workspace files, verified with go test ./... and server build, then pushed 962dc6fe to origin/main.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `962dc6fe` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
