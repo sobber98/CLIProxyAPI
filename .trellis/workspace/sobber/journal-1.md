@@ -138,3 +138,36 @@ Merged upstream/main at 106270be into the fork main branch, preserved fork histo
 ### Next Steps
 
 - None - task complete
+
+
+## Session 5: Update Docker image reference
+
+**Date**: 2026-07-17
+**Task**: Update Docker image reference
+**Branch**: `main`
+
+### Summary
+
+Updated the Docker image reference, completed required verification, and archived the completed Docker task.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `80981457` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

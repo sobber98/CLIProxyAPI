@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 4
+- **Total Sessions**: 5
 - **Last Active**: 2026-07-17
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~140 | Active |
+| `journal-1.md` | ~173 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 5 | 2026-07-17 | Update Docker image reference | `80981457` | `main` |
 | 4 | 2026-07-17 | Merge upstream updates | `962dc6fe` | `main` |
 | 3 | 2026-07-15 | Publish Docker image to GHCR | `be62ce9e`, `39624126` | `main` |
 | 2 | 2026-07-15 | Merge upstream main | `dd357306` | `main` |
