@@ -1,1 +1,3 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file":".trellis/tasks/07-17-management-credential-quick-grouping/prd.md","reason":"Check the delivered panel against all required grouping workflows and error handling."}
+{"file":".trellis/tasks/07-17-management-credential-quick-grouping/design.md","reason":"Check API contract preservation, OpenAI-compatible entry concurrency handling, responsive UX, and rollback compatibility."}
+{"file":".trellis/tasks/07-17-management-credential-quick-grouping/implement.md","reason":"Check implementation checklist completion and required test/build validation."}

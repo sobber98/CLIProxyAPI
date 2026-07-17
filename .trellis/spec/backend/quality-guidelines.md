@@ -186,9 +186,94 @@ for _, candidate := range fallbackCandidates {
 
 ```go
 for _, candidate := range fallbackCandidates {
-    if !authMatchesCredentialGroup(candidate, opts.Metadata) {
-        continue
-    }
-    return candidate
+	if !authMatchesCredentialGroup(candidate, opts.Metadata) {
+		continue
+	}
+	return candidate
 }
+```
+
+---
+
+## Scenario: Management Credential Group Editing
+
+### 1. Scope / Trigger
+
+The Management Center groups configured credentials, OAuth auth files, and
+downstream API keys. Group mutations cross the panel, Management API, config or
+auth-file persistence, and subsequent Management list responses.
+
+### 2. Signatures
+
+- `GET /v0/management/auth-files` returns `files[].group` as the trimmed
+  persisted group in both runtime-auth and disk-fallback responses.
+- `PATCH /v0/management/auth-files/fields` accepts `{"name":"...","group":"team-a"}`;
+  `group: ""` clears the assignment.
+- Configured API-key patch resources, including `PATCH /v0/management/xai-api-key`,
+  accept `{"match":"api-key","value":{"group":"team-a"}}`.
+- `GET`/`PUT /v0/management/api-key-groups` retain their wrapper contract
+  `{"api-key-groups":{"client-key":"team-a"}}`; remove a mapping to clear it.
+
+### 3. Contracts
+
+- Group values are trimmed and case-sensitive. Missing or empty values mean
+  ungrouped.
+- A Management list response must round-trip every editable group field. A
+  successful patch whose list response omits `group` is a broken UI contract.
+- Client bulk updates must select configured credentials by stable identity:
+  `match` for API-key resources and `name` for OpenAI-compatible providers.
+  Do not send a stale list index alongside an identity selector.
+- OpenAI-compatible `api-key-entries` need both their original index and API-key
+  value. Re-fetch the provider before its full-list PATCH, verify the selected
+  index still has the selected API key, and fail rather than update a moved item.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required behavior |
+| --- | --- |
+| OAuth group is patched then listed | Runtime and disk fallback each return the trimmed group. |
+| xAI group patch assigns or clears a group | Persist the trimmed value, including `""` for ungrouped. |
+| Provider list is concurrently reordered | Identity-only patch selects the matching record; no stale index is used. |
+| OpenAI API-key entry moved or removed | Reject that selected entry; never mutate another entry with the same key. |
+| `api-key-groups` endpoint unavailable | Keep upstream grouping usable and disable/report only downstream grouping. |
+
+### 5. Good/Base/Bad Cases
+
+- Good: an OAuth group saved through Management appears after panel refresh and
+  restricts selection once a downstream key maps to it.
+- Base: clearing a credential group persists `""`; clearing a downstream key
+  removes its `api-key-groups` entry.
+- Bad: the panel displays all OAuth credentials as ungrouped after refresh, or
+  a stale index changes a different credential after an operator reorders the
+  configuration.
+
+### 6. Tests Required
+
+- Management tests cover OAuth group patch followed by runtime listing and
+  disk-fallback listing.
+- Management tests cover xAI group assignment, trimming, and clearing.
+- Panel tests cover group API payloads, downstream mapping removal, partial
+  failures, OpenAI-compatible duplicate API keys, and reordered entry refusal.
+- Panel tests assert configured credential and provider mutations omit stale
+  indexes when a stable identity is available.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```ts
+await apiClient.patch('/gemini-api-key', {
+  index: loadedIndex,
+  match: apiKey,
+  value: { group },
+});
+```
+
+#### Correct
+
+```ts
+await apiClient.patch('/gemini-api-key', {
+  match: apiKey,
+  value: { group },
+});
 ```

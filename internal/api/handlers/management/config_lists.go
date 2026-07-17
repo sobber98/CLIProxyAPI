@@ -1467,6 +1467,7 @@ func (h *Handler) PatchXAIKey(c *gin.Context) {
 		Headers        *map[string]string `json:"headers"`
 		ExcludedModels *[]string          `json:"excluded-models"`
 		DisableCooling *bool              `json:"disable-cooling"`
+		Group          *string            `json:"group"`
 	}
 	var body struct {
 		Index *int         `json:"index"`
@@ -1535,6 +1536,9 @@ func (h *Handler) PatchXAIKey(c *gin.Context) {
 	}
 	if body.Value.DisableCooling != nil {
 		entry.DisableCooling = *body.Value.DisableCooling
+	}
+	if body.Value.Group != nil {
+		entry.Group = strings.TrimSpace(*body.Value.Group)
 	}
 	normalizeCodexKey(&entry)
 	h.cfg.XAIKey[targetIndex] = entry

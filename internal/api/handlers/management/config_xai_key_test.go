@@ -29,7 +29,8 @@ func TestPatchXAIKeyUpdatesExecutionFields(t *testing.T) {
 		"value": {
 			"priority": 7,
 			"websockets": false,
-			"disable-cooling": true
+			"disable-cooling": true,
+			"group": " team-a "
 		}
 	}`))
 	ctx.Request.Header.Set("Content-Type", "application/json")
@@ -48,5 +49,37 @@ func TestPatchXAIKeyUpdatesExecutionFields(t *testing.T) {
 	}
 	if !entry.DisableCooling {
 		t.Fatal("disable-cooling = false, want true")
+	}
+	if entry.Group != "team-a" {
+		t.Fatalf("group = %q, want %q", entry.Group, "team-a")
+	}
+}
+
+func TestPatchXAIKeyClearsGroup(t *testing.T) {
+	h := &Handler{
+		cfg: &config.Config{XAIKey: []config.XAIKey{{
+			APIKey:  "xai-key",
+			BaseURL: "https://api.x.ai/v1",
+			Group:   "team-a",
+		}}},
+		configFilePath: writeTestConfigFile(t),
+	}
+
+	rec := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(rec)
+	ctx.Request = httptest.NewRequest(
+		http.MethodPatch,
+		"/v0/management/xai-api-key",
+		strings.NewReader(`{"index":0,"value":{"group":""}}`),
+	)
+	ctx.Request.Header.Set("Content-Type", "application/json")
+
+	h.PatchXAIKey(ctx)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	if got := h.cfg.XAIKey[0].Group; got != "" {
+		t.Fatalf("group = %q, want empty", got)
 	}
 }

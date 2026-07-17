@@ -282,3 +282,78 @@ func TestPatchAuthFileFields_ArbitraryFieldsPersistToFile(t *testing.T) {
 		t.Fatalf("fgh.ijk = %#v, want true", got)
 	}
 }
+
+func TestPatchAuthFileFieldsGroupIsListedAndFallsBackFromDisk(t *testing.T) {
+	t.Setenv("MANAGEMENT_PASSWORD", "")
+
+	authDir := t.TempDir()
+	fileName := "grouped.json"
+	filePath := filepath.Join(authDir, fileName)
+	if errWrite := os.WriteFile(filePath, []byte(`{"type":"codex"}`), 0o600); errWrite != nil {
+		t.Fatalf("failed to create auth file: %v", errWrite)
+	}
+	store := fileauth.NewFileTokenStore()
+	store.SetBaseDir(authDir)
+	manager := coreauth.NewManager(store, nil, nil)
+	record := &coreauth.Auth{
+		ID:       fileName,
+		FileName: fileName,
+		Provider: "codex",
+		Attributes: map[string]string{
+			"path": filePath,
+		},
+		Metadata: map[string]any{"type": "codex"},
+	}
+	if _, errRegister := manager.Register(context.Background(), record); errRegister != nil {
+		t.Fatalf("failed to register auth record: %v", errRegister)
+	}
+	h := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: authDir}, manager)
+
+	patchRecorder := httptest.NewRecorder()
+	patchContext, _ := gin.CreateTestContext(patchRecorder)
+	patchContext.Request = httptest.NewRequest(
+		http.MethodPatch,
+		"/v0/management/auth-files/fields",
+		strings.NewReader(`{"name":"grouped.json","group":" team-a "}`),
+	)
+	patchContext.Request.Header.Set("Content-Type", "application/json")
+	h.PatchAuthFileFields(patchContext)
+	if patchRecorder.Code != http.StatusOK {
+		t.Fatalf("patch status = %d, want %d; body=%s", patchRecorder.Code, http.StatusOK, patchRecorder.Body.String())
+	}
+
+	listRecorder := httptest.NewRecorder()
+	listContext, _ := gin.CreateTestContext(listRecorder)
+	listContext.Request = httptest.NewRequest(http.MethodGet, "/v0/management/auth-files", nil)
+	h.ListAuthFiles(listContext)
+	var listed struct {
+		Files []struct {
+			Name  string `json:"name"`
+			Group string `json:"group"`
+		} `json:"files"`
+	}
+	if errDecode := json.Unmarshal(listRecorder.Body.Bytes(), &listed); errDecode != nil {
+		t.Fatalf("failed to decode auth list: %v", errDecode)
+	}
+	if len(listed.Files) != 1 || listed.Files[0].Name != fileName || listed.Files[0].Group != "team-a" {
+		t.Fatalf("listed files = %#v, want %q with group %q", listed.Files, fileName, "team-a")
+	}
+
+	diskHandler := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: authDir}, nil)
+	diskRecorder := httptest.NewRecorder()
+	diskContext, _ := gin.CreateTestContext(diskRecorder)
+	diskContext.Request = httptest.NewRequest(http.MethodGet, "/v0/management/auth-files", nil)
+	diskHandler.ListAuthFiles(diskContext)
+	var diskListed struct {
+		Files []struct {
+			Name  string `json:"name"`
+			Group string `json:"group"`
+		} `json:"files"`
+	}
+	if errDecode := json.Unmarshal(diskRecorder.Body.Bytes(), &diskListed); errDecode != nil {
+		t.Fatalf("failed to decode disk auth list: %v", errDecode)
+	}
+	if len(diskListed.Files) != 1 || diskListed.Files[0].Name != fileName || diskListed.Files[0].Group != "team-a" {
+		t.Fatalf("disk listed files = %#v, want %q with group %q", diskListed.Files, fileName, "team-a")
+	}
+}

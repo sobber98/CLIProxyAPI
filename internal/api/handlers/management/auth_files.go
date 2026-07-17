@@ -414,6 +414,7 @@ func (h *Handler) listAuthFilesFromDisk(c *gin.Context) {
 				emailValue := gjson.GetBytes(data, "email").String()
 				fileData["type"] = typeValue
 				fileData["email"] = emailValue
+				fileData["group"] = strings.TrimSpace(gjson.GetBytes(data, "group").String())
 				if projectID := strings.TrimSpace(gjson.GetBytes(data, "project_id").String()); projectID != "" {
 					fileData["project_id"] = projectID
 				}
@@ -483,6 +484,7 @@ func (h *Handler) buildAuthFileEntry(auth *coreauth.Auth) gin.H {
 		"runtime_only":   runtimeOnly,
 		"source":         "memory",
 		"size":           int64(0),
+		"group":          strings.TrimSpace(auth.Group),
 	}
 	entry["success"] = auth.Success
 	entry["failed"] = auth.Failed
